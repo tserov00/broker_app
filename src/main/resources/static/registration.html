@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Регистрация</title>
+    <style>
+        body {
+          font-family: Arial, sans-serif;
+          background-color: #f5f5f5;
+          margin: 0;
+          padding: 0;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          height: 100vh;
+        }
+        .container {
+          background-color: #fff;
+          padding: 20px;
+          border-radius: 8px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+          max-width: 400px;
+          width: 100%;
+        }
+        h1 {
+          text-align: center;
+          margin-bottom: 20px;
+        }
+        .form-group {
+          margin-bottom: 15px;
+        }
+        label {
+          display: block;
+          margin-bottom: 5px;
+          font-weight: bold;
+        }
+        input, textarea {
+          width: 100%;
+          padding: 8px;
+          border: 1px solid #ccc;
+          border-radius: 4px;
+          box-sizing: border-box;
+        }
+        button {
+          width: 100%;
+          padding: 10px;
+          border: none;
+          border-radius: 4px;
+          background-color: #007bff;
+          color: #fff;
+          font-size: 16px;
+          cursor: pointer;
+        }
+        button:hover {
+          background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Регистрация</h1>
+    <form id="regForm" action="/register" method="post">
+        <div class="form-group">
+            <label for="firstName">Имя</label>
+            <input type="text" id="firstName" name="firstName" required>
+        </div>
+        <div class="form-group">
+            <label for="lastName">Фамилия</label>
+            <input type="text" id="lastName" name="lastName" required>
+        </div>
+        <div class="form-group">
+            <label for="birthDate">Дата рождения</label>
+            <input type="date" id="birthDate" name="birthDate" required>
+        </div>
+        <div class="form-group">
+            <label for="passport">Номер и серия паспорта</label>
+            <input type="text" id="passport" name="passport" placeholder="1234 567890" required>
+        </div>
+        <div class="form-group">
+            <label for="address">Адрес</label>
+            <textarea id="address" name="address" rows="3" required></textarea>
+        </div>
+        <div class="form-group">
+            <label for="inn">ИНН</label>
+            <input type="text" id="inn" name="inn" placeholder="123456789012" required>
+        </div>
+        <div class="form-group">
+            <label for="phone">Номер телефона</label>
+            <input type="tel" id="phone" name="phone" placeholder="+7 (___) ___-__-__" required>
+        </div>
+        <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" required>
+        </div>
+        <div class="form-group">
+            <label for="login">Login</label>
+            <input type="text" id="login" name="login" required>
+        </div>
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" required>
+        </div>
+        <button type="submit">Зарегистрироваться</button>
+    </form>
+</div>
+
+<script>
+    document.getElementById('regForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const data = new URLSearchParams(new FormData(form));
+      try {
+        const resp = await fetch(form.action, {
+          method: 'POST',
+          body: data
+        });
+        if (resp.ok) {
+          // вместо alert → сразу редирект
+          window.location.href = '/portfolio.html';
+        } else {
+          const errText = await resp.text();
+          alert('Ошибка регистрации: ' + errText);
+        }
+      } catch (err) {
+        alert('Сетевая ошибка: ' + err.message);
+      }
+    });
+</script>
+</body>
+</html>

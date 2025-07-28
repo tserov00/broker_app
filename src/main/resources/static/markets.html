@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Рынки</title>
+    <style>
+        /* общий стиль */
+        body { font-family: Arial, sans-serif; background: #f5f5f5; margin:0; padding:0 }
+        .container { max-width:1200px; margin:20px auto; background:#fff; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.1); overflow:hidden }
+        .navbar { display:flex; justify-content:space-around; background:#fafafa; border-bottom:1px solid #ddd }
+        .navbar a { padding:12px 20px; text-decoration:none; color:#333; font-weight:500 }
+        .navbar a.active { color:#007bff; border-bottom:3px solid #007bff }
+        .navbar a:hover { background:#f0f0f0 }
+        .content { padding:20px }
+
+        table { width:100%; border-collapse:collapse; }
+        th,td { padding:8px 12px; border-bottom:1px solid #ddd; text-align:left; }
+        th { background:#f0f0f0 }
+        .no-data { text-align:center; color:#777; padding:20px 0 }
+
+        /* кнопка «Купить» */
+        .btn-buy {
+          padding:6px 12px;
+          background:#28a745; color:#fff;
+          border:none; border-radius:4px;
+          cursor:pointer;
+        }
+        .btn-buy:hover { background:#218838 }
+
+        /* модальное окно */
+        .modal-backdrop {
+          position:fixed; top:0; left:0; right:0; bottom:0;
+          background:rgba(0,0,0,0.5);
+          display:none; align-items:center; justify-content:center;
+        }
+        .modal {
+          background:#fff; padding:20px; border-radius:8px;
+          width:300px; box-shadow:0 2px 8px rgba(0,0,0,0.2);
+        }
+        .modal h2 { margin-top:0; }
+        .modal .form-group { margin:10px 0; }
+        .modal label { display:block; margin-bottom:4px; font-weight:500 }
+        .modal input { width:100%; padding:6px; box-sizing:border-box }
+        .modal .fee { margin-top:8px; font-weight:500; }
+        .modal .actions { text-align:right; margin-top:15px; }
+        .modal .actions button {
+          margin-left:8px; padding:6px 12px; border:none; border-radius:4px;
+          cursor:pointer;
+        }
+        .modal .actions .confirm { background:#007bff; color:#fff }
+        .modal .actions .cancel { background:#6c757d; color:#fff }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <nav class="navbar">
+        <a href="/portfolio.html">Портфель</a>
+        <a href="/markets.html" class="active">Рынки</a>
+        <a href="/accounts.html">Мои счета</a>
+        <a href="/orders.html">Мои заявки</a>
+        <a href="/transactions.html">Мои транзакции</a>
+    </nav>
+
+    <div class="content">
+        <h1>Рынок ценных бумаг</h1>
+        <table id="marketsTable">
+            <thead>
+            <tr>
+                <th>Тикер</th>
+                <th>Компания</th>
+                <th>ISIN</th>
+                <th>Валюта</th>
+                <th>Цена</th>
+                <th>Действие</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr><td colspan="6" class="no-data">загрузка...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Модальное окно -->
+<div id="modal" class="modal-backdrop">
+    <div class="modal">
+        <h2>Купить <span id="modalTicker"></span></h2>
+        <div class="form-group">
+            <label for="priceInput">Цена за единицу</label>
+            <input type="number" id="priceInput" min="0" step="0.01">
+        </div>
+        <div class="form-group">
+            <label for="qtyInput">Количество</label>
+            <input type="number" id="qtyInput" min="1" step="1">
+        </div>
+        <div class="fee">Комиссия: <span id="feeValue">0.00</span></div>
+        <div class="actions">
+            <button class="cancel" onclick="closeModal()">Отмена</button>
+            <button class="confirm" onclick="confirmBuy()">Подтвердить</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentSecurityId = null;
+
+    async function loadMarkets() {
+      const tbody = document.querySelector('#marketsTable tbody');
+      try {
+        const resp = await fetch('/api/market/securities');
+        if (!resp.ok) throw new Error(resp.status);
+        const list = await resp.json();
+        tbody.innerHTML = '';
+        if (list.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" class="no-data">Нет данных</td></tr>';
+          return;
+        }
+        for (const sec of list) {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${sec.ticker}</td>
+            <td>${sec.companyName}</td>
+            <td>${sec.isin}</td>
+            <td>${sec.currencyCode}</td>
+            <td>${sec.lastPrice.toFixed(2)}</td>
+            <td><button class="btn-buy"
+                        data-id="${sec.id}"
+                        data-ticker="${sec.ticker}"
+                        data-price="${sec.lastPrice}">Купить</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        }
+
+        // Навешиваем обработчик на все кнопки «Купить»
+        document.querySelectorAll('.btn-buy').forEach(btn => {
+          btn.addEventListener('click', () => openModal(
+            btn.dataset.id,
+            btn.dataset.ticker,
+            parseFloat(btn.dataset.price)
+          ));
+        });
+      } catch (err) {
+        tbody.innerHTML = '<tr><td colspan="6" class="no-data">Ошибка загрузки рынка</td></tr>';
+        console.error(err);
+      }
+    }
+
+    function openModal(id, ticker, defaultPrice) {
+      currentSecurityId = id;
+      document.getElementById('modalTicker').textContent = ticker;
+      document.getElementById('priceInput').value = defaultPrice.toFixed(2);
+      document.getElementById('qtyInput').value = 1;
+      updateFee();
+      document.getElementById('modal').style.display = 'flex';
+
+      document.getElementById('priceInput').oninput = updateFee;
+      document.getElementById('qtyInput').oninput = updateFee;
+    }
+
+    function updateFee() {
+      const price = parseFloat(document.getElementById('priceInput').value) || 0;
+      const qty   = parseInt(document.getElementById('qtyInput').value) || 0;
+      const fee = price * qty * 0.003;
+      document.getElementById('feeValue').textContent = fee.toFixed(2);
+    }
+
+    function closeModal() {
+      document.getElementById('modal').style.display = 'none';
+    }
+
+    async function confirmBuy() {
+      const price = parseFloat(document.getElementById('priceInput').value);
+      const qty   = parseInt(document.getElementById('qtyInput').value, 10);
+      const secId = parseInt(currentSecurityId, 10);
+
+      if (isNaN(secId) || isNaN(price) || isNaN(qty)) {
+        return alert('Некорректные данные для ордера');
+      }
+
+      const body = { securityId: secId, price, quantity: qty };
+      console.log('CreateBuyOrder body:', body);
+
+      try {
+        const resp = await fetch('/api/orders/buy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        if (!resp.ok) {
+          const text = await resp.text();
+          alert('Ошибка при создании заявки: ' + text);
+        } else {
+          alert('Заявка успешно создана!');
+          closeModal();
+        }
+      } catch (err) {
+        alert('Сетевая ошибка: ' + err.message);
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', loadMarkets);
+</script>
+</body>
+</html>

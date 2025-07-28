@@ -1,0 +1,19 @@
+### Java ###
+target/
+*.jar
+*.war
+*.class
+
+### IntelliJ ###
+.idea/
+*.iml
+out/
+
+### Database ###
+*.log
+/db/
+postgres-data/
+
+### System ###
+.DS_Store
+Thumbs.db
